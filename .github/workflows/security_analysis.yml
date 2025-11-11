@@ -1,0 +1,111 @@
+name: CI Pipeline (Angular & Django Security)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  frontend_analysis:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Frontend/game-project 
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js Environment
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20' 
+        cache: 'npm'
+        cache-dependency-path: Frontend/game-project/package-lock.json 
+
+    - name: Install Frontend Dependencies (Build)
+      run: npm install --ignore-scripts 
+
+
+    - name: Run Semgrep (SAST - Frontend)
+      uses: returntocorp/semgrep-action@v1
+      with:
+        config: auto
+        # Сканируем только код фронтенда
+        directory: Frontend/game-project 
+        output-format: sarif
+        # Отчет будет сохранен в рабочей директории
+        output: frontend_semgrep_report.sarif 
+        
+    - name: Upload Semgrep SARIF Report (Frontend SAST 1)
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-semgrep-sast-report
+        path: Frontend/game-project/frontend_semgrep_report.sarif
+        
+    - name: Install Snyk CLI
+      run: npm install -g snyk
+
+    - name: Run Snyk Analysis (Frontend SAST & SCA)
+      run: |
+        snyk code test --json --file=package.json > snyk_frontend_sast.json || true
+        snyk test --json --file=package.json > snyk_frontend_sca.json || true
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }} 
+
+    - name: Upload Snyk Frontend Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-snyk-reports
+        path: Frontend/game-project/*.json
+
+        
+  backend_analysis:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gametalk_api 
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Setup Python Environment
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Backend Dependencies (Build)
+      run: pip install -r requirements.txt
+      
+
+    - name: Run Semgrep (SAST - Backend)
+      uses: returntocorp/semgrep-action@v1
+      with:
+        config: auto
+        directory: gametalk_api 
+        output-format: sarif
+        output: backend_semgrep_report.sarif
+
+    - name: Upload Semgrep SARIF Report (Backend SAST 1)
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-semgrep-sast-report
+        path: gametalk_api/backend_semgrep_report.sarif
+        
+    - name: Install Snyk CLI
+      run: pip install snyk
+      
+    - name: Run Snyk Analysis (Backend SAST & SCA)
+      run: |
+        snyk code test --json > snyk_backend_sast.json || true
+        snyk test --file=requirements.txt --json > snyk_backend_sca.json || true
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+    - name: Upload Snyk Backend Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-snyk-reports
+        path: gametalk_api/*.json
