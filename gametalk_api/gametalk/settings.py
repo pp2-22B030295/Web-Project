@@ -58,7 +58,18 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',  # Временно разрешим доступ всем
-    ]
+    ],
+    'DEFAULT_THROTTLE_CLASSES': [
+        # Указываем классы ограничения, например, по анонимным пользователям и пользователям с аутентификацией
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        # Определяем лимиты:
+        'anon': '100/day', # 100 запросов в день для анонимных
+        'user': '1000/hour' # 1000 запросов в час для аутентифицированных
+        # Вы можете настроить эти лимиты по своему усмотрению.
+    }
 }
 
 # Настройки JWT
