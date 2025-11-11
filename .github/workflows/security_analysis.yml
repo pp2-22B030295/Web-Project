@@ -44,8 +44,6 @@ jobs:
         name: frontend-semgrep-sast-report
         path: Frontend/game-project/frontend_semgrep_report.sarif
         
-    - name: Install Snyk CLI
-      run: npm install -g snyk
 
     - name: Run Snyk Analysis (Frontend SAST & SCA)
       run: |
@@ -98,14 +96,22 @@ jobs:
       run: pip install snyk
       
     - name: Run Snyk Analysis (Backend SAST & SCA)
-      run: |
-        snyk code test --json > snyk_backend_sast.json || true
-        snyk test --file=requirements.txt --json > snyk_backend_sca.json || true
+      uses: snyk/actions/python-3.11@master
+      with:
+        file: gametalk_api/requirements.txt 
+        args: --file=requirements.txt --json-output=snyk_backend_sca.json
+        
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-    - name: Upload Snyk Backend Artifacts
+    - name: Upload Snyk SAST Report (Backend SAST 2)
       uses: actions/upload-artifact@v4
       with:
-        name: backend-snyk-reports
+        name: backend-snyk-sast-report
         path: gametalk_api/*.json
+    
+    - name: Upload Snyk SCA Report (Backend SCA 1)
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-snyk-sca-report
+        path: gametalk_api/snyk_backend_sca.json
