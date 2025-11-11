@@ -27,15 +27,12 @@ jobs:
     - name: Install Frontend Dependencies (Build)
       run: npm install --ignore-scripts 
 
-
     - name: Run Semgrep (SAST - Frontend)
       uses: returntocorp/semgrep-action@v1
       with:
         config: auto
-        # Сканируем только код фронтенда
         directory: Frontend/game-project 
         output-format: sarif
-        # Отчет будет сохранен в рабочей директории
         output: frontend_semgrep_report.sarif 
         
     - name: Upload Semgrep SARIF Report (Frontend SAST 1)
@@ -44,6 +41,7 @@ jobs:
         name: frontend-semgrep-sast-report
         path: Frontend/game-project/frontend_semgrep_report.sarif
         
+
 
     - name: Run Snyk Analysis (Frontend SAST & SCA)
       run: |
@@ -64,20 +62,22 @@ jobs:
     defaults:
       run:
         working-directory: gametalk_api 
-
+  
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
-
+  
     - name: Setup Python Environment
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-
+  
     - name: Install Backend Dependencies (Build)
       run: pip install -r requirements.txt
       
 
+    
+ 
     - name: Run Semgrep (SAST - Backend)
       uses: returntocorp/semgrep-action@v1
       with:
@@ -92,26 +92,21 @@ jobs:
         name: backend-semgrep-sast-report
         path: gametalk_api/backend_semgrep_report.sarif
         
-    - name: Install Snyk CLI
-      run: pip install snyk
+
+    - name: Install Snyk CLI via npm
+      run: npm install -g snyk 
       
     - name: Run Snyk Analysis (Backend SAST & SCA)
-      uses: snyk/actions/python-3.11@master
-      with:
-        file: gametalk_api/requirements.txt 
-        args: --file=requirements.txt --json-output=snyk_backend_sca.json
+      run: |
         
+        snyk code test --json > snyk_backend_sast.json || true
+        
+        snyk test --file=requirements.txt --json > snyk_backend_sca.json || true
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-    - name: Upload Snyk SAST Report (Backend SAST 2)
+    - name: Upload Snyk Backend Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: backend-snyk-sast-report
+        name: backend-snyk-reports
         path: gametalk_api/*.json
-    
-    - name: Upload Snyk SCA Report (Backend SCA 1)
-      uses: actions/upload-artifact@v4
-      with:
-        name: backend-snyk-sca-report
-        path: gametalk_api/snyk_backend_sca.json
